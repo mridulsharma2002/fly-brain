@@ -16,4 +16,5 @@ x = pd.to_numeric(c.pos_x, errors='coerce').values; yy = pd.to_numeric(c.pos_y, 
 m = ~np.isnan(x); x, yy = x[m], yy[m]
 k = np.random.default_rng(0).choice(len(x), 6000, replace=False)
 d['bg'] = [int(v) for p in zip(x[k], yy[k]) for v in p]; d['bgN'] = len(x)
+# (later) z coordinates for the 3D view: neuron soma_z/pos_z as d['z'], silhouette pos_z as d['bgz']
 json.dump(d, open('../brain.json', 'w'), separators=(',', ':'))

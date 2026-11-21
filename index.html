@@ -4,13 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fly Brain NPC</title>
-<meta name="description" content="A real fruit fly brain wiring diagram drives a little NPC that hunts for sugar. Drop food, lemons and walls, and watch the neurons fire.">
+<meta name="description" content="A real fruit fly brain wiring diagram drives a game character that hunts for sugar. Race it against a scripted NPC, evolve a swarm, build mazes, and watch the neurons fire in 3D.">
 <meta property="og:title" content="Fly Brain NPC">
-<meta property="og:description" content="A real fruit fly brain wiring diagram drives a little NPC that hunts for sugar. Drop food, lemons and walls, and watch the neurons fire.">
+<meta property="og:description" content="A real fruit fly brain wiring diagram drives a game character that hunts for sugar. Race it against a scripted NPC, evolve a swarm, build mazes.">
 <meta property="og:image" content="https://fly.mridulmerges.ca/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preload" href="brain.json" as="fetch" crossorigin>
+<link rel="modulepreload" href="brain.js">
+<link rel="modulepreload" href="world.js">
+<link rel="modulepreload" href="render.js">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,35 +21,66 @@
   <header class="top">
     <a class="back" href="https://mridulmerges.ca/?src=fly">mridulmerges.ca</a>
     <h1>A game character with a real fly brain</h1>
-    <p class="lede">Game NPCs usually run on rules someone wrote. This fly runs on <strong>867 neurons and 40,722 connections</strong> copied from a real fruit fly brain, the FlyWire map. Nobody wrote "go to the sugar". Drop some and watch what happens.</p>
+    <p class="lede">Game NPCs usually run on rules someone wrote. This fly runs on <strong>867 neurons and 40,722 connections</strong> copied from a real fruit fly brain, the FlyWire map. Nobody wrote "go to the sugar".</p>
   </header>
+
+  <nav class="modes" role="tablist" aria-label="Mode">
+    <button role="tab" class="mode on" data-mode="play" aria-selected="true">Play</button>
+    <button role="tab" class="mode" data-mode="race" aria-selected="false">Race the NPC</button>
+    <button role="tab" class="mode" data-mode="evolve" aria-selected="false">Evolve a swarm</button>
+  </nav>
+  <p class="mode-lede" id="modeLede"></p>
 
   <section class="stage" aria-label="Game">
     <div class="arena-card">
       <div class="tools" role="toolbar" aria-label="Tools">
-        <button class="tool on" data-tool="sugar"><span class="sw sugar"></span>Sugar</button>
-        <button class="tool" data-tool="lemon"><span class="sw lemon"></span>Lemon</button>
-        <button class="tool" data-tool="wall"><span class="sw wall"></span>Wall</button>
-        <button class="tool" data-tool="erase"><span class="sw erase"></span>Erase</button>
-        <button class="ghost" id="clear">Clear</button>
+        <span class="only-play">
+          <button class="tool on" data-tool="sugar"><span class="sw sugar"></span>Sugar</button>
+          <button class="tool" data-tool="lemon"><span class="sw lemon"></span>Lemon</button>
+          <button class="tool" data-tool="wall"><span class="sw wall"></span>Wall</button>
+          <button class="tool" data-tool="erase"><span class="sw erase"></span>Erase</button>
+        </span>
+        <span class="only-race only-evolve"><button id="restart" class="primary">Restart</button></span>
       </div>
-      <div class="arena-box"><canvas id="arena" aria-label="Arena. Tap to drop items."></canvas>
-        <div class="hint" id="hint">Tap anywhere to drop sugar</div>
+      <div class="arena-box"><canvas id="arena" aria-label="Arena"></canvas>
+        <div class="hint" id="hint"></div>
+        <div class="banner" id="banner" hidden></div>
       </div>
-      <div class="stats mono"><span>Sugar eaten <b id="eaten">0</b></span><span id="state">Wandering</span></div>
+      <div class="levelbar">
+        <label class="mono" for="level">Level</label>
+        <select id="level"></select>
+        <span class="only-play">
+          <button class="ghost sm" id="clear">Clear</button>
+          <button class="ghost sm" id="save">Save</button>
+          <button class="ghost sm" id="share">Share link</button>
+        </span>
+      </div>
+      <div class="stats mono">
+        <span class="only-play">Sugar eaten <b id="eaten">0</b></span>
+        <span class="only-race score">First to 5 · <span class="t-brain">Brain <b id="sBrain">0</b></span> · <span class="t-script">Script <b id="sScript">0</b></span> · <span id="clock">0.0 s</span></span>
+        <span class="only-evolve">Gen <b id="gen">1</b> · <span id="genClock">30 s left</span> · best <b id="best">0.0</b></span>
+        <span id="state"></span>
+      </div>
+      <canvas class="only-evolve spark" id="spark" aria-label="Best and average sugar per generation"></canvas>
     </div>
 
     <div class="brain-card">
       <div class="brain-head">
-        <div><span class="dot live"></span><span class="mono">LIVE BRAIN</span></div>
-        <div class="mono muted" id="firing">0 neurons firing</div>
+        <div><span class="dot live"></span><span class="mono" id="brainTitle">LIVE BRAIN</span></div>
+        <div class="seg" role="group" aria-label="Brain view">
+          <button class="segb on" data-view="3d">3D</button><button class="segb" data-view="2d">Map</button>
+        </div>
       </div>
       <div class="brain-box"><canvas id="brain" aria-label="Brain activity. Tap a neuron to switch it off."></canvas>
         <div class="tip mono" id="tip" hidden></div>
+        <div class="firing mono" id="firing">0 firing</div>
       </div>
-      <p class="cap muted">Seen from behind, so the fly's left is on the left. Grey is the whole brain (139k neurons). Dots are the ones this game runs. Tap a dot to switch it off.</p>
+      <p class="cap" id="brainCap">Grey is the whole fly brain (139k neurons) at its real shape. Bright dots are the 867 this game runs, at their real positions. Drag to turn it, tap a dot to switch it off.</p>
+
+      <div class="bt only-race" id="bt" aria-label="The scripted NPC's behaviour tree"></div>
+
       <div class="meters" id="meters"></div>
-      <div class="surgery">
+      <div class="surgery only-play only-race">
         <div class="mono label">Brain surgery</div>
         <div class="sbtns">
           <button data-cut="feed">Cut the feeding neuron (MN9)</button>
@@ -55,6 +89,7 @@
           <button data-cut="reset" class="ghost">Heal everything</button>
         </div>
       </div>
+      <div class="only-evolve evo-note" id="evoNote"></div>
     </div>
   </section>
 
@@ -76,19 +111,28 @@ turn  = sugarSide
       - touch(L)  + touch(R)    // DNg35, DNg84
 eat   = MN9 > threshold          // proboscis motor neuron
 back  = bitter or touch too high</code></pre>
-        <p>Left versus right sugar isn't one neuron. It's spread across about 100 output neurons, so a small linear decoder reads it, the same trick neuroscientists use on real recordings.</p>
         <p>Every input to that code is a neuron's firing rate. Nothing in it knows where the sugar is.</p>
+      </div>
+    </div>
+    <div class="cols">
+      <div>
+        <h3>The race</h3>
+        <p>The blue fly is a normal game NPC: a behaviour tree I wrote by hand, checked top to bottom every frame. It gets the exact same senses as the brain fly, the same antennae and the same sugar smell. One was designed, the other was wired by evolution. Try the maze.</p>
+      </div>
+      <div>
+        <h3>The swarm</h3>
+        <p>Every fly in the swarm starts with the real wiring. Each generation, the best sugar hunters survive unchanged, and the rest are replaced by their children, with 8% of the connections made a bit stronger or weaker at random. Watch the best score climb. It's evolution on top of a real brain, not training.</p>
       </div>
     </div>
     <h3>Honest notes</h3>
     <ul class="notes">
       <li>Real flies find food from far away by smell. In this model, the smell circuit runs away and lights up 10,000 neurons at once, so sugar reaches the brain through its taste neurons instead.</li>
       <li>Wall bumps go in through touch neurons on the antennae. Lemons go in through bitter taste neurons.</li>
-      <li>The brain doesn't learn here. It's the same wiring every time, so what you see is instinct.</li>
+      <li>A single fly doesn't learn. Same wiring every time, so what you see is instinct. Only the swarm changes, and only between generations.</li>
     </ul>
     <p class="credits muted">Connectome: FlyWire Consortium, Dorkenwald et al. and Schlegel et al., <i>Nature</i> 2024 (data CC BY 4.0, v783). Brain model: Shiu et al., <i>Nature</i> 2024 (MIT). Built by <a href="https://mridulmerges.ca/?src=fly">Mridul Sharma</a>. <a href="https://github.com/mridulsharma2002/fly-brain" rel="noopener">Source on GitHub</a>. Free, no ads, no tracking.</p>
   </section>
 </main>
-<script src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
