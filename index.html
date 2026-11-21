@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fly Brain NPC</title>
+<meta name="description" content="A real fruit fly brain wiring diagram drives a little NPC that hunts for sugar. Drop food, lemons and walls, and watch the neurons fire.">
+<meta property="og:title" content="Fly Brain NPC">
+<meta property="og:description" content="A real fruit fly brain wiring diagram drives a little NPC that hunts for sugar. Drop food, lemons and walls, and watch the neurons fire.">
+<meta property="og:image" content="https://fly.mridulmerges.ca/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preload" href="brain.json" as="fetch" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <a class="back" href="https://mridulmerges.ca/?src=fly">mridulmerges.ca</a>
+    <h1>A game character with a real fly brain</h1>
+    <p class="lede">Game NPCs usually run on rules someone wrote. This fly runs on <strong>867 neurons and 40,722 connections</strong> copied from a real fruit fly brain, the FlyWire map. Nobody wrote "go to the sugar". Drop some and watch what happens.</p>
+  </header>
+
+  <section class="stage" aria-label="Game">
+    <div class="arena-card">
+      <div class="tools" role="toolbar" aria-label="Tools">
+        <button class="tool on" data-tool="sugar"><span class="sw sugar"></span>Sugar</button>
+        <button class="tool" data-tool="lemon"><span class="sw lemon"></span>Lemon</button>
+        <button class="tool" data-tool="wall"><span class="sw wall"></span>Wall</button>
+        <button class="tool" data-tool="erase"><span class="sw erase"></span>Erase</button>
+        <button class="ghost" id="clear">Clear</button>
+      </div>
+      <div class="arena-box"><canvas id="arena" aria-label="Arena. Tap to drop items."></canvas>
+        <div class="hint" id="hint">Tap anywhere to drop sugar</div>
+      </div>
+      <div class="stats mono"><span>Sugar eaten <b id="eaten">0</b></span><span id="state">Wandering</span></div>
+    </div>
+
+    <div class="brain-card">
+      <div class="brain-head">
+        <div><span class="dot live"></span><span class="mono">LIVE BRAIN</span></div>
+        <div class="mono muted" id="firing">0 neurons firing</div>
+      </div>
+      <div class="brain-box"><canvas id="brain" aria-label="Brain activity. Tap a neuron to switch it off."></canvas>
+        <div class="tip mono" id="tip" hidden></div>
+      </div>
+      <p class="cap muted">Seen from behind, so the fly's left is on the left. Grey is the whole brain (139k neurons). Dots are the ones this game runs. Tap a dot to switch it off.</p>
+      <div class="meters" id="meters"></div>
+      <div class="surgery">
+        <div class="mono label">Brain surgery</div>
+        <div class="sbtns">
+          <button data-cut="feed">Cut the feeding neuron (MN9)</button>
+          <button data-cut="sugar">Silence sugar taste</button>
+          <button data-cut="bitter">Silence the bitter alarm</button>
+          <button data-cut="reset" class="ghost">Heal everything</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="how">
+    <h2>How it works</h2>
+    <div class="cols">
+      <div>
+        <h3>The brain is real</h3>
+        <p>The wiring comes from <a href="https://flywire.ai" rel="noopener">FlyWire</a>, the first complete map of an adult fruit fly brain: 139,255 neurons and their connections, traced from electron microscope images. The firing rules come from the whole-brain model by Shiu et al. (<i>Nature</i>, 2024). Each neuron adds up its inputs, leaks a little, and fires when it crosses a threshold.</p>
+        <p>Running all 139k neurons would melt a phone, so I ran the full brain on a server first. I fed it sugar, bitter and touch, kept every neuron that ever fired, and kept the real connections between them. That's the 867 you see, and it still behaves like the full brain for these senses.</p>
+      </div>
+      <div>
+        <h3>The body is mine</h3>
+        <p>The brain has no legs here, so a few lines of code connect its outputs to a toy body. I picked the outputs by testing which neurons fire for sugar, bitter and touch on each side:</p>
+<pre class="code"><code>sugarSide = decoder(106 output neurons)  // fitted on 440 brain runs
+turn  = sugarSide
+      + (sugar fading ? turn harder : 0)
+      - bitter(L) + bitter(R)   // DNp42, DNge067
+      - touch(L)  + touch(R)    // DNg35, DNg84
+eat   = MN9 > threshold          // proboscis motor neuron
+back  = bitter or touch too high</code></pre>
+        <p>Left versus right sugar isn't one neuron. It's spread across about 100 output neurons, so a small linear decoder reads it, the same trick neuroscientists use on real recordings.</p>
+        <p>Every input to that code is a neuron's firing rate. Nothing in it knows where the sugar is.</p>
+      </div>
+    </div>
+    <h3>Honest notes</h3>
+    <ul class="notes">
+      <li>Real flies find food from far away by smell. In this model, the smell circuit runs away and lights up 10,000 neurons at once, so sugar reaches the brain through its taste neurons instead.</li>
+      <li>Wall bumps go in through touch neurons on the antennae. Lemons go in through bitter taste neurons.</li>
+      <li>The brain doesn't learn here. It's the same wiring every time, so what you see is instinct.</li>
+    </ul>
+    <p class="credits muted">Connectome: FlyWire Consortium, Dorkenwald et al. and Schlegel et al., <i>Nature</i> 2024 (data CC BY 4.0, v783). Brain model: Shiu et al., <i>Nature</i> 2024 (MIT). Built by <a href="https://mridulmerges.ca/?src=fly">Mridul Sharma</a>. <a href="https://github.com/mridulsharma2002/fly-brain" rel="noopener">Source on GitHub</a>. Free, no ads, no tracking.</p>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
