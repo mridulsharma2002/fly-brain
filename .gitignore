@@ -1,0 +1,3 @@
+pipeline/data/
+pipeline/*.pkl
+__pycache__/
